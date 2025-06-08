@@ -2,9 +2,11 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { CreatTaskDto } from './dto/creat-task.dto';
 import { Task } from './entities/task.entity';
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-
+import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class TaskService {
+  constructor(private prisma: PrismaService) {}
+
   private tasks: Task[] = [
     {
       id: 1,
@@ -15,10 +17,19 @@ export class TaskService {
   ];
 
   findall() {
-    return this.tasks;
+    const allTasks = this.prisma.task.findMany();
+    return allTasks;
   }
 
-  findOne(id: string) {
+  async findOne(id: string) {
+    const task = await this.prisma.task.findFirst({
+      where: { id: Number(id) },
+    });
+
+    if (task?.name) return task;
+
+    throw new HttpException('não foi possivel achar', HttpStatus.NOT_FOUND);
+
     return this.tasks.find(task => task.id === Number(id));
   }
 
