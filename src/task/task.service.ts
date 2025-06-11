@@ -1,23 +1,26 @@
+import { findIndex } from 'rxjs';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { CreatTaskDto } from './dto/creat-task.dto';
 import { Task } from './entities/task.entity';
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 @Injectable()
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
-  private tasks: Task[] = [
-    {
-      id: 1,
-      name: 'primeiro',
-      description: 'primeiro objeto ',
-      completed: false,
-    },
-  ];
+  async findall(paginationDto?: PaginationDto) {
+    const { limit = 10, offset = 0 } = paginationDto || {};
 
-  findall() {
-    const allTasks = this.prisma.task.findMany();
+    console.log(paginationDto);
+
+    const allTasks = await this.prisma.task.findMany({
+      take: limit,
+      skip: offset,
+      orderBy: {
+        created: 'desc',
+      },
+    });
     return allTasks;
   }
 
@@ -29,47 +32,77 @@ export class TaskService {
     if (task?.name) return task;
 
     throw new HttpException('não foi possivel achar', HttpStatus.NOT_FOUND);
-
-    return this.tasks.find(task => task.id === Number(id));
   }
 
-  create(creatTaskDto: CreatTaskDto) {
-    const newId = this.tasks.length + 1;
+  async create(creatTaskDto: CreatTaskDto) {
+    const newtask = await this.prisma.task.create({
+      data: {
+        name: creatTaskDto.name,
+        description: creatTaskDto.description,
+        completed: false,
+      },
+    });
 
-    const newTask = {
-      id: newId,
-      ...creatTaskDto,
-      completed: false,
-    };
-
-    this.tasks.push(newTask);
-
-    return newTask;
+    return newtask;
   }
 
-  update(id: string, updateTaskDto: UpdateTaskDto) {
-    const taskIndex = this.tasks.findIndex(task => task.id === Number(id));
+  async update(id: number, updateTaskDto: UpdateTaskDto) {
+    try {
+      const taskIndex = await this.prisma.task.findFirst({
+        where: {
+          id: id,
+        },
+      });
 
-    if (taskIndex >= 0) {
-      const taskitem = this.tasks[taskIndex];
-      this.tasks[taskIndex] = {
-        ...taskitem,
-        ...updateTaskDto,
-      };
+      if (!taskIndex) {
+        throw new HttpException(
+          'não foi possivel achar ',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const task = await this.prisma.task.update({
+        where: {
+          id: taskIndex.id,
+        },
+        data: updateTaskDto,
+      });
+
+      return task;
+    } catch (err) {
+      throw new HttpException(
+        'não foi possivel achar ',
+        HttpStatus.BAD_REQUEST,
+      );
     }
-
-    return 'tarefa atualizada';
   }
 
-  delete(id: string) {
-    const taskIndex = this.tasks.findIndex(task => task.id === Number(id));
+  async delete(id: number) {
+    try {
+      const findTask = await this.prisma.task.findFirst({
+        where: {
+          id: id,
+        },
+      });
 
-    if (taskIndex <= 0) {
-      throw new HttpException('nao encontrado', HttpStatus.NOT_FOUND);
+      if (!findTask) {
+        throw new HttpException(
+          'não foi possivel achar ',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      await this.prisma.task.delete({
+        where: {
+          id: findTask.id,
+        },
+      });
+
+      return 'tarefa deletada ';
+    } catch (err) {
+      throw new HttpException(
+        'não foi possivel achar ',
+        HttpStatus.BAD_REQUEST,
+      );
     }
-
-    this.tasks.splice(taskIndex, 1);
-
-    return 'tarefa excluida com sucesso';
   }
 }
