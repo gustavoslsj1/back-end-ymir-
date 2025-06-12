@@ -21,4 +21,16 @@ model Task {
   completed   Boolean
 
   created DateTime? @default(now())
+  User    User?     @relation(fields: [userId], references: [id])
+  userId  Int?
+}
+
+model User {
+  id           Int    @id @default(autoincrement())
+  name         String
+  passwordHash String
+  email        String @unique
+  Task         Task[]
+
+  created DateTime? @default(now())
 }
