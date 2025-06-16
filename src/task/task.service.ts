@@ -40,6 +40,7 @@ export class TaskService {
         name: creatTaskDto.name,
         description: creatTaskDto.description,
         completed: false,
+        userId: creatTaskDto.userId,
       },
     });
 
