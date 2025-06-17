@@ -22,7 +22,7 @@ export class UsersController {
 
   @Post()
   createUser(@Body() createUserDto: CreatUserDto) {
-    return this.userService.createUser(createUserDto);
+    return this.userService.create(createUserDto);
   }
   @Patch(':id')
   updateUser(

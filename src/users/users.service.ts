@@ -2,10 +2,14 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { CreatUserDto } from './dto/creat-user.dto';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { HashingServiceProtocol } from 'src/auth/hash/hashing.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private pisma: PrismaService) {}
+  constructor(
+    private pisma: PrismaService,
+    private readonly hashingService: HashingServiceProtocol,
+  ) {}
   async findOne(id: number) {
     const user = await this.pisma.user.findFirst({
       where: {
@@ -26,13 +30,16 @@ export class UsersService {
     );
   }
 
-  async createUser(creatUserDto: CreatUserDto) {
+  async create(creatUserDto: CreatUserDto) {
     try {
+      const passwordHash = await this.hashingService.hash(
+        creatUserDto.password,
+      );
       const user = await this.pisma.user.create({
         data: {
           name: creatUserDto.name,
           email: creatUserDto.email,
-          passwordHash: creatUserDto.password,
+          passwordHash: passwordHash,
         },
         select: {
           id: true,
@@ -59,14 +66,23 @@ export class UsersService {
       if (!user) {
         throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
       }
+      const dataUser: { name?: string; passwordHash?: string } = {
+        name: updateUserDto.name ? updateUserDto.name : user.name,
+      };
 
+      if (updateUserDto?.password) {
+        const passwordHash = await this.hashingService.hash(
+          updateUserDto?.password,
+        );
+        dataUser['passwordHash'] = passwordHash;
+      }
       const updateUser = await this.pisma.user.update({
         where: {
           id: user.id,
         },
         data: {
-          name: updateUserDto.name ? updateUserDto.name : user.name,
-          passwordHash: updateUserDto.password
+          name: dataUser.name,
+          passwordHash: dataUser?.passwordHash ? dataUser?.passwordHash ? user.passwordHash
             ? updateUserDto.password
             : user.passwordHash,
         },
