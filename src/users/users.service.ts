@@ -82,8 +82,8 @@ export class UsersService {
         },
         data: {
           name: dataUser.name,
-          passwordHash: dataUser?.passwordHash ? dataUser?.passwordHash ? user.passwordHash
-            ? updateUserDto.password
+          passwordHash: dataUser?.passwordHash
+            ? dataUser?.passwordHash
             : user.passwordHash,
         },
         select: {
