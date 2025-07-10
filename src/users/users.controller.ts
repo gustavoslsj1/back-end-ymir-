@@ -16,6 +16,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthTokenGuard } from 'src/auth/guard/auth-token.guard';
 import { REQUEST_TOKEN_PAYLOAD_NAME } from 'src/auth/common/auth.constants';
 import { Request } from 'express';
+import { TokenPayloadParam } from 'src/auth/param/token.param-payload';
+import { TokenPayloadDto } from 'src/auth/dto/token-payload.dto';
 
 @Controller('users')
 export class UsersController {
@@ -34,15 +36,18 @@ export class UsersController {
   updateUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
-    @Req() req: Request,
+    @TokenPayloadParam() tokenPayloadParam: TokenPayloadDto,
   ) {
-    console.log(req[REQUEST_TOKEN_PAYLOAD_NAME]);
+    console.log('payload recebido:', tokenPayloadParam);
 
-    return this.userService.update(id, updateUserDto);
+    return this.userService.update(id, updateUserDto, tokenPayloadParam);
   }
-
+  @UseGuards(AuthTokenGuard)
   @Delete(':id')
-  deleteUser(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.delete(id);
+  deleteUser(
+    @Param('id', ParseIntPipe) id: number,
+    @TokenPayloadParam() tokenPayloadParam: TokenPayloadDto,
+  ) {
+    return this.userService.delete(id, tokenPayloadParam);
   }
 }

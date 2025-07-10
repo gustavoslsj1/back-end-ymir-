@@ -1,8 +1,10 @@
+import { TokenPayloadParam } from './../auth/param/token.param-payload';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreatUserDto } from './dto/creat-user.dto';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { HashingServiceProtocol } from 'src/auth/hash/hashing.service';
+import { TokenPayloadDto } from 'src/auth/dto/token-payload.dto';
 
 @Injectable()
 export class UsersService {
@@ -55,7 +57,13 @@ export class UsersService {
     }
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(
+    id: number,
+    updateUserDto: UpdateUserDto,
+    TokenPayloadParam: TokenPayloadDto,
+  ) {
+    console.log(TokenPayloadParam);
+
     try {
       const user = await this.pisma.user.findFirst({
         where: {
@@ -75,6 +83,9 @@ export class UsersService {
           updateUserDto?.password,
         );
         dataUser['passwordHash'] = passwordHash;
+      }
+      if (user.id != TokenPayloadParam.sub) {
+        throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
       }
       const updateUser = await this.pisma.user.update({
         where: {
@@ -100,7 +111,7 @@ export class UsersService {
     }
   }
 
-  async delete(id: number) {
+  async delete(id: number, TokenPayloadParam: TokenPayloadDto) {
     try {
       const user = await this.pisma.user.findFirst({
         where: {
@@ -111,7 +122,9 @@ export class UsersService {
       if (!user) {
         throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
       }
-
+      if (user.id != TokenPayloadParam.sub) {
+        throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
+      }
       await this.pisma.user.delete({
         where: {
           id: user.id,

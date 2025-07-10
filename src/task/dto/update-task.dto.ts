@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { CreatTaskDto } from './creat-task.dto';
 import { IsBoolean, IsOptional } from 'class-validator';
 

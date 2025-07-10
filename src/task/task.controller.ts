@@ -1,3 +1,4 @@
+import { TokenPayloadParam } from './../auth/param/token.param-payload';
 import {
   Body,
   Controller,
@@ -8,20 +9,22 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CreatTaskDto } from './dto/creat-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { LoggerInterceptor } from 'src/common/interceptors/logger.inteceptor';
+
+import { AuthTokenGuard } from 'src/auth/guard/auth-token.guard';
+import { TokenPayloadDto } from 'src/auth/dto/token-payload.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('task')
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
   @Get('/tarefa')
-  @UseInterceptors(LoggerInterceptor)
   findAllTask(@Query() paginationDto: PaginationDto) {
     return this.taskService.findall(paginationDto);
   }
@@ -32,8 +35,13 @@ export class TaskController {
   }
 
   @Post()
-  creatTask(@Body() creatTaskDto: CreatTaskDto) {
-    return this.taskService.create(creatTaskDto);
+  @UseGuards(AuthTokenGuard)
+  @ApiBearerAuth()
+  creatTask(
+    @Body() creatTaskDto: CreatTaskDto,
+    @TokenPayloadParam() tokenPayload: TokenPayloadDto,
+  ) {
+    return this.taskService.create(creatTaskDto, tokenPayload);
   }
 
   // @Patch(':id')
@@ -42,7 +50,11 @@ export class TaskController {
   // }
 
   @Delete(':id')
-  deleteTask(@Param('id', ParseIntPipe) id: number) {
-    this.taskService.delete(id);
+  @UseGuards(AuthTokenGuard)
+  deleteTask(
+    @Param('id', ParseIntPipe) id: number,
+    @TokenPayloadParam() tokenPayload: TokenPayloadDto,
+  ) {
+    this.taskService.delete(id, tokenPayload);
   }
 }

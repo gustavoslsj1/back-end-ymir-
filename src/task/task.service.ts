@@ -1,3 +1,4 @@
+import { TokenPayloadDto } from './../auth/dto/token-payload.dto';
 import { findIndex } from 'rxjs';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { CreatTaskDto } from './dto/creat-task.dto';
@@ -5,11 +6,13 @@ import { Task } from './entities/task.entity';
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ResponseTaskDto } from './dto/response-task.dto';
+
 @Injectable()
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
-  async findall(paginationDto?: PaginationDto) {
+  async findall(paginationDto?: PaginationDto): Promise<ResponseTaskDto[]> {
     const { limit = 10, offset = 0 } = paginationDto || {};
 
     console.log(paginationDto);
@@ -24,7 +27,7 @@ export class TaskService {
     return allTasks;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<ResponseTaskDto> {
     const task = await this.prisma.task.findFirst({
       where: { id: Number(id) },
     });
@@ -34,20 +37,27 @@ export class TaskService {
     throw new HttpException('não foi possivel achar', HttpStatus.NOT_FOUND);
   }
 
-  async create(creatTaskDto: CreatTaskDto) {
+  async create(
+    creatTaskDto: CreatTaskDto,
+    tokenPayload: TokenPayloadDto,
+  ): Promise<ResponseTaskDto> {
     const newtask = await this.prisma.task.create({
       data: {
         name: creatTaskDto.name,
         description: creatTaskDto.description,
         completed: false,
-        userId: creatTaskDto.userId,
+        userId: tokenPayload.sub,
       },
     });
 
     return newtask;
   }
 
-  async update(id: number, updateTaskDto: UpdateTaskDto) {
+  async update(
+    id: number,
+    updateTaskDto: UpdateTaskDto,
+    tokenPayload: TokenPayloadDto,
+  ): Promise<ResponseTaskDto> {
     try {
       const taskIndex = await this.prisma.task.findFirst({
         where: {
@@ -55,6 +65,12 @@ export class TaskService {
         },
       });
 
+      if (taskIndex?.userId != tokenPayload.sub) {
+        throw new HttpException(
+          'não foi possivel achar ',
+          HttpStatus.NOT_FOUND,
+        );
+      }
       if (!taskIndex) {
         throw new HttpException(
           'não foi possivel achar ',
@@ -78,13 +94,20 @@ export class TaskService {
     }
   }
 
-  async delete(id: number) {
+  async delete(id: number, tokenPayload: TokenPayloadDto) {
     try {
       const findTask = await this.prisma.task.findFirst({
         where: {
           id: id,
         },
       });
+
+      if (findTask?.userId != tokenPayload.sub) {
+        throw new HttpException(
+          'não foi possivel achar ',
+          HttpStatus.NOT_FOUND,
+        );
+      }
 
       if (!findTask) {
         throw new HttpException(
