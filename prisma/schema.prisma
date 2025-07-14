@@ -31,6 +31,8 @@ model User {
   passwordHash String
   active       Boolean @default(true)
   email        String  @unique
+  phone        Int?
+  endereco     String?
   Task         Task[]
 
   created DateTime? @default(now())

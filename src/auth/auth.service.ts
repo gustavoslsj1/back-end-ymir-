@@ -24,7 +24,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new HttpException('erro ao logar ', HttpStatus.BAD_REQUEST);
+      throw new HttpException('email invalido', HttpStatus.BAD_REQUEST);
     }
 
     const passwordisValid = await this.hash.compare(
@@ -33,7 +33,7 @@ export class AuthService {
     );
 
     if (!passwordisValid) {
-      throw new HttpException('erro ao logar ', HttpStatus.BAD_REQUEST);
+      throw new HttpException('senha invalida', HttpStatus.BAD_REQUEST);
     }
 
     const token = await this.jwtService.signAsync(
@@ -48,6 +48,6 @@ export class AuthService {
         issuer: this.jwtConfiguration.issuer,
       },
     );
-    return { id: user.id, email: user.email, name: user.name, token: token };
+    return token;
   }
 }

@@ -1,6 +1,6 @@
 import { AuthService } from './auth.service';
-
-import { Body, Controller, Post } from '@nestjs/common';
+import { Response } from 'express';
+import { Body, Controller, Post, Res } from '@nestjs/common';
 import { SingInDto } from './dto/singin.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -12,7 +12,18 @@ export class AuthController {
   ) {}
 
   @Post()
-  singin(@Body() singInDto: SingInDto) {
-    return this.authService.authenticated(singInDto);
+  async signin(
+    @Body() signInDto: SingInDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = await this.authService.authenticated(signInDto);
+    res.cookie('auth', token, {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24,
+    });
+
+    return { message: 'ok' };
   }
 }

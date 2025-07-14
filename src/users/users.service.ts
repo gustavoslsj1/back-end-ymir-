@@ -74,8 +74,15 @@ export class UsersService {
       if (!user) {
         throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
       }
-      const dataUser: { name?: string; passwordHash?: string } = {
+      const dataUser: {
+        name?: string;
+        passwordHash?: string;
+        phone?: number;
+        endereco?: string;
+      } = {
         name: updateUserDto.name ? updateUserDto.name : user.name,
+        phone: updateUserDto.phone ?? user.phone,
+        endereco: updateUserDto.endereco ?? user.endereco,
       };
 
       if (updateUserDto?.password) {
@@ -96,10 +103,14 @@ export class UsersService {
           passwordHash: dataUser?.passwordHash
             ? dataUser?.passwordHash
             : user.passwordHash,
+          phone: dataUser.phone,
+          endereco: dataUser.endereco,
         },
         select: {
           name: true,
           email: true,
+          phone: true,
+          endereco: true,
           id: true,
         },
       });
