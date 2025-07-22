@@ -8,19 +8,21 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreatUserDto } from './dto/creat-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthTokenGuard } from 'src/auth/guard/auth-token.guard';
-import { REQUEST_TOKEN_PAYLOAD_NAME } from 'src/auth/common/auth.constants';
-import { Request } from 'express';
+import { Response as ExpressResponse } from 'express';
+
 import { TokenPayloadParam } from 'src/auth/param/token.param-payload';
 import { TokenPayloadDto } from 'src/auth/dto/token-payload.dto';
 
 @Controller('users')
 export class UsersController {
+  jwtService: any;
   constructor(private readonly userService: UsersService) {}
   @Get(':id')
   findOneUser(@Param('id', ParseIntPipe) id: number) {
@@ -33,13 +35,12 @@ export class UsersController {
   }
   @UseGuards(AuthTokenGuard)
   @Patch(':id')
-  updateUser(
+  async updateUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
     @TokenPayloadParam() tokenPayloadParam: TokenPayloadDto,
   ) {
     console.log('payload recebido:', tokenPayloadParam);
-
     return this.userService.update(id, updateUserDto, tokenPayloadParam);
   }
   @UseGuards(AuthTokenGuard)

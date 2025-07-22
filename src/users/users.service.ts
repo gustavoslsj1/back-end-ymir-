@@ -5,12 +5,15 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { HashingServiceProtocol } from 'src/auth/hash/hashing.service';
 import { TokenPayloadDto } from 'src/auth/dto/token-payload.dto';
+import { Response } from 'express';
+import { JwtService } from '@nestjs/jwt'; // se estiver usando JwtService
 
 @Injectable()
 export class UsersService {
   constructor(
     private pisma: PrismaService,
     private readonly hashingService: HashingServiceProtocol,
+    private readonly jwtService: JwtService,
   ) {}
   async findOne(id: number) {
     const user = await this.pisma.user.findFirst({
@@ -60,66 +63,65 @@ export class UsersService {
   async update(
     id: number,
     updateUserDto: UpdateUserDto,
-    TokenPayloadParam: TokenPayloadDto,
+    tokenPayload: TokenPayloadDto,
   ) {
-    console.log(TokenPayloadParam);
+    const user = await this.pisma.user.findFirst({ where: { id } });
 
-    try {
-      const user = await this.pisma.user.findFirst({
-        where: {
-          id: id,
-        },
-      });
-
-      if (!user) {
-        throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
-      }
-      const dataUser: {
-        name?: string;
-        passwordHash?: string;
-        phone?: number;
-        endereco?: string;
-      } = {
-        name: updateUserDto.name ? updateUserDto.name : user.name,
-        phone: updateUserDto.phone ?? user.phone,
-        endereco: updateUserDto.endereco ?? user.endereco,
-      };
-
-      if (updateUserDto?.password) {
-        const passwordHash = await this.hashingService.hash(
-          updateUserDto?.password,
-        );
-        dataUser['passwordHash'] = passwordHash;
-      }
-      if (user.id != TokenPayloadParam.sub) {
-        throw new HttpException('user n existe ', HttpStatus.BAD_REQUEST);
-      }
-      const updateUser = await this.pisma.user.update({
-        where: {
-          id: user.id,
-        },
-        data: {
-          name: dataUser.name,
-          passwordHash: dataUser?.passwordHash
-            ? dataUser?.passwordHash
-            : user.passwordHash,
-          phone: dataUser.phone,
-          endereco: dataUser.endereco,
-        },
-        select: {
-          name: true,
-          email: true,
-          phone: true,
-          endereco: true,
-          id: true,
-        },
-      });
-
-      return updateUser;
-    } catch (err) {
-      console.log(err);
-      throw new HttpException('erro ao atualizar  ', HttpStatus.BAD_REQUEST);
+    if (!user || user.id !== tokenPayload.sub) {
+      throw new HttpException('user n existe', HttpStatus.BAD_REQUEST);
     }
+
+    const dataUser: {
+      name?: string;
+      email: string;
+      passwordHash?: string;
+      phone?: string;
+      endereco?: string;
+    } = {
+      name: updateUserDto.name ?? user.name,
+      email: updateUserDto.email ?? user.email,
+      phone: updateUserDto.phone ?? user.phone,
+      endereco: updateUserDto.endereco ?? user.endereco,
+    };
+    console.log('Dados recebidos para update:', dataUser);
+    if (updateUserDto.password) {
+      dataUser.passwordHash = await this.hashingService.hash(
+        updateUserDto.password,
+      );
+    }
+
+    const updatedUser = await this.pisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: dataUser.name,
+        email: dataUser.email,
+        passwordHash: dataUser.passwordHash ?? user.passwordHash,
+        phone: dataUser.phone,
+        endereco: dataUser.endereco,
+      },
+      select: {
+        name: true,
+        email: true,
+        phone: true,
+        endereco: true,
+        id: true,
+      },
+    });
+    const tokenPayloadForJwt = {
+      sub: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      endereco: updatedUser.endereco,
+    };
+
+    const newToken = this.jwtService.sign(tokenPayloadForJwt, {
+      audience: 'http://localhost:3001',
+    });
+    return {
+      user: updatedUser,
+      token: newToken,
+    };
   }
 
   async delete(id: number, TokenPayloadParam: TokenPayloadDto) {

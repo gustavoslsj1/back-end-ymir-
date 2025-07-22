@@ -4,8 +4,8 @@ import { CreatUserDto } from './creat-user.dto';
 
 export class UpdateUserDto extends PartialType(CreatUserDto) {
   @IsOptional()
-  @IsInt()
-  phone: number;
+  @IsString()
+  phone: string;
   @IsString()
   @IsOptional()
   endereco: string;
